@@ -2,24 +2,33 @@ import pygame
 import math
 
 # --- Pac-Man Drawing Function ---
-def draw_pacman(surface, pos, radius, mouth_angle=50, facing_angle=0, 
+def draw_pacman(surface, pos, radius, mouth_angle=50, facing_angle=0,
                 color=(255, 255, 0), bg_color=(128, 0, 128)):
-    """Draw a Pac-Man shape at pos with mouth facing facing_angle (in degrees)."""
+    """Draw a Pac-Man shape at pos with mouth facing facing_angle (radians)."""
     # Draw full circle
     pygame.draw.circle(surface, color, pos, radius)
 
-    # Calculate mouth triangle points
+    # Calculate mouth triangle points (slightly extend beyond radius to avoid leftover pixels)
     half_mouth = math.radians(mouth_angle / 2)
     angles = [facing_angle - half_mouth, facing_angle + half_mouth]
 
-    points = [pos]  # center of pacman
+    points = [pos]  # center
     for angle in angles:
-        x = pos[0] + radius * math.cos(angle)
-        y = pos[1] + radius * math.sin(angle)
+        x = pos[0] + (radius + 2) * math.cos(angle)  # radius+2 => fully cut
+        y = pos[1] + (radius + 2) * math.sin(angle)
         points.append((x, y))
 
-    # Cut mouth (draw background-colored triangle)
     pygame.draw.polygon(surface, bg_color, points)
+
+    # --- Draw Eye ---
+    # Eye position is rotated with Pac-Man direction
+    eye_offset_angle = facing_angle - math.pi / 2  # eye slightly above mouth direction
+    eye_distance = radius * 0.4  # distance from center
+    eye_pos = (
+        pos[0] + eye_distance * math.cos(eye_offset_angle),
+        pos[1] + eye_distance * math.sin(eye_offset_angle)
+    )
+    pygame.draw.circle(surface, (0, 0, 0), eye_pos, radius * 0.12)  # small black eye
 
 
 # --- Pygame Setup ---
@@ -36,7 +45,6 @@ speed = 300
 facing_angle = 0  # radians, direction Pac-Man is facing
 
 while running:
-    # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -53,30 +61,26 @@ while running:
     if keys[pygame.K_d]:
         move.x += 1
 
-    # Normalize to keep diagonal speed consistent
     if move.length_squared() > 0:
         move = move.normalize()
-        facing_angle = math.atan2(move.y, move.x)  # store direction
+        facing_angle = math.atan2(move.y, move.x)
         player_pos += move * speed * dt
 
-    # Clean wrap-around using modulo
+    # Wrap-around using modulo
     player_pos.x %= screen.get_width()
     player_pos.y %= screen.get_height()
 
-    # Fill background
+    # Draw background
     screen.fill((128, 0, 128))  # purple
 
-    # Draw Pac-Man and wrapped copies
+    # Draw Pac-Man with wrap-around copies
     for dx in (-screen.get_width(), 0, screen.get_width()):
         for dy in (-screen.get_height(), 0, screen.get_height()):
             pos = (player_pos.x + dx, player_pos.y + dy)
             draw_pacman(screen, pos, radius, mouth_angle=50, facing_angle=facing_angle,
                         color=(255, 255, 0), bg_color=(128, 0, 128))
 
-    # Flip display
     pygame.display.flip()
-
-    # Cap dt to avoid big jumps
     dt = min(clock.tick(60) / 1000, 0.05)
 
 pygame.quit()
