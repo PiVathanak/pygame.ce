@@ -1,4 +1,4 @@
-# Example file showing a circle moving on screen
+# Circle moving with smooth wrap-around (Pac-Man style)
 import pygame
 
 # pygame setup
@@ -9,35 +9,49 @@ running = True
 dt = 0
 
 player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
+radius = 40  # circle radius
+speed = 300  # pixels per second
 
 while running:
     # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # fill the screen with a color to wipe away anything from last frame
-    screen.fill("purple")
-
-    pygame.draw.circle(screen, "red", player_pos, 40)
-
+    # movement
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        player_pos.y -= 300 * dt
+        player_pos.y -= speed * dt
     if keys[pygame.K_s]:
-        player_pos.y += 300 * dt
+        player_pos.y += speed * dt
     if keys[pygame.K_a]:
-        player_pos.x -= 300 * dt
+        player_pos.x -= speed * dt
     if keys[pygame.K_d]:
-        player_pos.x += 300 * dt
+        player_pos.x += speed * dt
 
-    # flip() the display to put your work on screen
+    # wrap position (teleport logic for center point)
+    if player_pos.x < 0:
+        player_pos.x += screen.get_width()
+    if player_pos.x > screen.get_width():
+        player_pos.x -= screen.get_width()
+    if player_pos.y < 0:
+        player_pos.y += screen.get_height()
+    if player_pos.y > screen.get_height():
+        player_pos.y -= screen.get_height()
+
+    # fill background
+    screen.fill("purple")
+
+    # draw circle with wrapping (extra copies on edges)
+    for dx in (-screen.get_width(), 0, screen.get_width()):
+        for dy in (-screen.get_height(), 0, screen.get_height()):
+            pos = (player_pos.x + dx, player_pos.y + dy)
+            pygame.draw.circle(screen, "red", pos, radius)
+
+    # flip() the display
     pygame.display.flip()
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
+    # limit FPS
     dt = clock.tick(60) / 1000
 
 pygame.quit()
