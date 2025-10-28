@@ -5,7 +5,7 @@ import math
 # Initialize Pygame
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
-pygame.display.set_caption("Cool Circle Motion ✨")
+pygame.display.set_caption("Pac-Man Motion 🍒")
 clock = pygame.time.Clock()
 running = True
 dt = 0
@@ -13,7 +13,8 @@ dt = 0
 # Player setup
 player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
 player_speed = 400
-player_radius = 30
+player_radius = 40
+player_angle = 0
 
 # Particle system
 particles = []
@@ -34,13 +35,26 @@ def wrap_around(pos, width, height):
     if pos.y < 0: pos.y = height
     if pos.y > height: pos.y = 0
 
+def draw_pacman(surface, position, radius, angle, mouth_open, color=(255, 255, 0)):
+    """Draw Pac-Man with animated mouth."""
+    x, y = position
+    start_angle = math.radians(mouth_open) + angle
+    end_angle = math.radians(360 - mouth_open) + angle
+    # Draw body (arc filled)
+    points = [position]
+    steps = 30
+    for i in range(steps + 1):
+        a = start_angle + (end_angle - start_angle) * i / steps
+        points.append((x + math.cos(a) * radius, y + math.sin(a) * radius))
+    pygame.draw.polygon(surface, color, points)
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # Create gradient background
-    draw_gradient_background(screen, (255, 150, 200), (150, 200, 255))
+    # Gradient background
+    draw_gradient_background(screen, (255, 180, 200), (150, 210, 255))
 
     # Handle input
     keys = pygame.key.get_pressed()
@@ -52,7 +66,8 @@ while running:
     if move.length() > 0:
         move = move.normalize()
         player_pos += move * player_speed * dt
-
+        # Face the direction of movement
+        player_angle = math.atan2(move.y, move.x)
         # Add motion particles
         for _ in range(3):
             particles.append([
@@ -64,12 +79,8 @@ while running:
     # Wrap around screen
     wrap_around(player_pos, screen.get_width(), screen.get_height())
 
-    # Color-changing circle
-    color_shift = (
-        abs(int(math.sin(pygame.time.get_ticks() * 0.002) * 255)),
-        abs(int(math.sin(pygame.time.get_ticks() * 0.003 + 2) * 255)),
-        abs(int(math.sin(pygame.time.get_ticks() * 0.004 + 4) * 255)),
-    )
+    # Animate mouth (open-close)
+    mouth_open = 30 + abs(math.sin(pygame.time.get_ticks() * 0.005)) * 25
 
     # Draw particles
     for particle in particles[:]:
@@ -77,14 +88,19 @@ while running:
         pos[0] += vel[0]
         pos[1] += vel[1]
         radius -= 0.1
-        pygame.draw.circle(screen, (255, 255, 255, 50), (int(pos[0]), int(pos[1])), int(radius))
+        pygame.draw.circle(screen, (255, 255, 255), (int(pos[0]), int(pos[1])), int(radius))
         if radius <= 0:
             particles.remove(particle)
 
-    # Draw player
-    pygame.draw.circle(screen, color_shift, player_pos, player_radius)
+    # Draw Pac-Man
+    draw_pacman(screen, player_pos, player_radius, player_angle, mouth_open)
 
-    # Update display
+    # Eye
+    eye_offset = pygame.Vector2(math.cos(player_angle), math.sin(player_angle)) * 15
+    eye_pos = player_pos - eye_offset.rotate(90)
+    pygame.draw.circle(screen, (0, 0, 0), (int(eye_pos.x), int(eye_pos.y)), 5)
+
+    # Update screen
     pygame.display.flip()
     dt = clock.tick(60) / 1000
 
